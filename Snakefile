@@ -43,8 +43,8 @@ CDIR = Path(cutout_dir).joinpath("" if run["shared_cutouts"] else RDIR)
 RESULTS = "results/" + RDIR
 
 
-localrules:
-    purge,
+#localrules:
+#    purge,
 
 
 wildcard_constraints:
@@ -155,20 +155,20 @@ rule create_scenarios:
         "config/create_scenarios.py"
 
 
-rule purge:
-    run:
-        import builtins
-
-        do_purge = builtins.input(
-            "Do you really want to delete all generated resources, \nresults and docs (downloads are kept)? [y/N] "
-        )
-        if do_purge == "y":
-            rmtree("resources/", ignore_errors=True)
-            rmtree("results/", ignore_errors=True)
-            rmtree("doc/_build", ignore_errors=True)
-            print("Purging generated resources, results and docs. Downloads are kept.")
-        else:
-            raise Exception(f"Input {do_purge}. Aborting purge.")
+#rule purge:
+#    run:
+#        import builtins
+#
+#        do_purge = builtins.input(
+#            "Do you really want to delete all generated resources, \nresults and docs (downloads are kept)? [y/N] "
+#        )
+#        if do_purge == "y":
+#            rmtree("resources/", ignore_errors=True)
+#            rmtree("results/", ignore_errors=True)
+#            rmtree("doc/_build", ignore_errors=True)
+#            print("Purging generated resources, results and docs. Downloads are kept.")
+#        else:
+#            raise Exception(f"Input {do_purge}. Aborting purge.")
 
 
 rule dump_graph_config:

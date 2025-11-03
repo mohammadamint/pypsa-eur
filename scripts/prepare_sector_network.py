@@ -1794,6 +1794,12 @@ def add_storage_and_grids(
     - Battery storage systems
     - Carbon capture and conversion facilities (if enabled in options)
     """
+    # # if import tax is enabled
+    # if options["constraints"]["import_tax"]["enable"]:
+    #     import_tax = options["constraints"]["import_tax"]["value"]
+    # else: 
+    import_tax = 0
+        
     # Set defaults
     options = options or {}
 
@@ -1874,32 +1880,57 @@ def add_storage_and_grids(
         logger.info("Add hydrogen underground storage")
 
         h2_capital_cost = costs.at["hydrogen storage underground", "capital_cost"]
-
         n.add(
-            "Store",
-            h2_caverns.index + " H2 Store",
+            "StorageUnit",
+            h2_caverns.index + " H2 Store Underground",
             bus=h2_caverns.index + " H2",
-            e_nom_extendable=True,
-            e_nom_max=h2_caverns.values,
-            e_cyclic=True,
-            carrier="H2 Store",
+            p_nom_extendable=True,
+            p_nom_max = h2_caverns.values/385,
+            cyclic_state_of_charge=True,
+            carrier="H2 Underground Store",
             capital_cost=h2_capital_cost,
             lifetime=costs.at["hydrogen storage underground", "lifetime"],
+            max_hours = 385,
+            efficiency_dispatch = 0.99,
         )
+        # n.add(
+        #     "Store",
+        #     h2_caverns.index + " H2 Store",
+        #     bus=h2_caverns.index + " H2",
+        #     e_nom_extendable=True,
+        #     e_nom_max=h2_caverns.values,
+        #     e_cyclic=True,
+        #     carrier="H2 Store",
+        #     capital_cost=h2_capital_cost,
+        #     lifetime=costs.at["hydrogen storage underground", "lifetime"],
+        # )
 
     # hydrogen stored overground (where not already underground)
     tech = "hydrogen storage tank type 1 including compressor"
     nodes_overground = h2_caverns.index.symmetric_difference(nodes)
 
+    # n.add(
+    #     "Store",
+    #     nodes_overground + " H2 Store",
+    #     bus=nodes_overground + " H2",
+    #     e_nom_extendable=True,
+    #     e_cyclic=True,
+    #     carrier="H2 Store",
+    #     capital_cost=costs.at[tech, "capital_cost"],
+    #     lifetime=costs.at[tech, "lifetime"],
+    # )
     n.add(
-        "Store",
-        nodes_overground + " H2 Store",
-        bus=nodes_overground + " H2",
-        e_nom_extendable=True,
-        e_cyclic=True,
-        carrier="H2 Store",
+        "StorageUnit",
+        nodes + " H2 Tank Store",
+        bus=nodes + " H2",
+        p_nom_extendable=True,
+        cyclic_state_of_charge=True,
+        carrier="H2 Tank Store",
         capital_cost=costs.at[tech, "capital_cost"],
         lifetime=costs.at[tech, "lifetime"],
+        max_hours = 12,
+        efficiency_dispatch = 0.76,
+        standing_loss = 0.0013,
     )
 
     if options["H2_retrofit"]:
@@ -1924,7 +1955,9 @@ def add_storage_and_grids(
                 gas_pipes.length * costs.at["CH4 (g) pipeline", "capital_cost"]
             )
             gas_pipes["p_nom_extendable"] = False
+        
 
+            
         n.add(
             "Link",
             gas_pipes.index,
@@ -1940,6 +1973,7 @@ def add_storage_and_grids(
             tags=gas_pipes.name,
             carrier="gas pipeline",
             lifetime=np.inf,
+            marginal_cost = import_tax, # Todo, this should be re-represented at country level only. How to do it?
         )
 
         # remove fossil generators where there is neither
@@ -2017,6 +2051,8 @@ def add_storage_and_grids(
                     * costs.at["CH4 (g) pipeline", "capital_cost"],
                     carrier="gas pipeline new",
                     lifetime=costs.at["CH4 (g) pipeline", "lifetime"],
+                    marginal_cost = import_tax, # Todo, this should be re-represented at country level only. How to do it?
+
                 )
 
     if options["H2_retrofit"]:
@@ -2040,6 +2076,8 @@ def add_storage_and_grids(
             tags=h2_pipes.name,
             carrier="H2 pipeline retrofitted",
             lifetime=costs.at["H2 (g) pipeline repurposed", "lifetime"],
+            marginal_cost = import_tax, # Todo, this should be re-represented at country level only. How to do it?
+
         )
 
     if options["H2_network"]:
@@ -2064,6 +2102,8 @@ def add_storage_and_grids(
             * h2_pipes.length.values,
             carrier="H2 pipeline",
             lifetime=costs.at["H2 (g) pipeline", "lifetime"],
+            marginal_cost = import_tax, # Todo, this should be re-represented at country level only. How to do it?
+
         )
 
     n.add("Carrier", "battery")

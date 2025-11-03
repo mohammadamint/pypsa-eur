@@ -91,7 +91,8 @@ plotting:
     - DAC
     soc:
     - battery
-    - H2 Store
+    - H2 Tank Store
+    - H2 Underground Store
     - co2 stored
     - gas
     - methanol
@@ -498,6 +499,8 @@ plotting:
     H2 turbine: '#991f83'
     H2 Electrolysis: '#ff29d9'
     H2 electrolysis: '#ff29d9'
+    H2 Tank Store: '#bf13a0'
+    H2 Underground Store: '#bf13a0'
     # ammonia
     NH3: '#46caf0'
     ammonia: '#46caf0'

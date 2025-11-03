@@ -751,12 +751,13 @@ def add_SAFE_constraints(n, config):
     Which sets a reserve margin of 10% above the peak demand.
     """
     peakdemand = n.loads_t.p_set.sum(axis=1).max()
-    margin = 1.0 + config["electricity"]["SAFE_reservemargin"]
+    margin = 1.0 + 0.1 #config["electricity"]["SAFE_reservemargin"]
     reserve_margin = peakdemand * margin
     conventional_carriers = config["electricity"]["conventional_carriers"]  # noqa: F841
     ext_gens_i = n.generators.query(
         "carrier in @conventional_carriers & p_nom_extendable"
     ).index
+
     p_nom = n.model["Generator-p_nom"].loc[ext_gens_i]
     lhs = p_nom.sum()
     exist_conv_caps = n.generators.query(
@@ -1233,8 +1234,10 @@ def extra_functionality(
 
     if config["sector"]["imports"]["enable"]:
         add_import_limit_constraint(n, snapshots)
+    
 
     if n.params.custom_extra_functionality:
+        
         source_path = n.params.custom_extra_functionality
         assert os.path.exists(source_path), f"{source_path} does not exist"
         sys.path.append(os.path.dirname(source_path))

@@ -878,9 +878,13 @@ def pulp_paper_printing():
     ]
     df.loc["elec", sector] += s_fec[sel].sum()
 
-    # Efficiency changes due to biomass
-    eff_bio = s_ued["Biomass and waste"] / s_fec["Biomass and waste"]
-    df.loc["biomass", sector] += s_ued["Pulp: Pulping thermal"] / eff_bio
+    if heat_via_biomass:
+        # Efficiency changes due to biomass
+        eff_bio = s_ued["Biomass and waste"] / s_fec["Biomass and waste"]
+        df.loc["biomass", sector] += s_ued["Pulp: Pulping thermal"] / eff_bio
+    else:
+        df.loc["elec", sector] += s_ued["Pulp: Pulping thermal"]
+
 
     s_out = idees["out"][8:9]
     assert sector in str(s_out.index)
@@ -933,18 +937,25 @@ def pulp_paper_printing():
     assert s_fec.index[0] == "Paper: Paper machine - Steam use"
     assert s_ued.index[0] == "Paper: Paper machine - Steam use"
 
-    # Efficiency changes due to biomass
-    eff_bio = s_ued["Biomass and waste"] / s_fec["Biomass and waste"]
-    df.loc["biomass", sector] += s_ued["Paper: Paper machine - Steam use"] / eff_bio
+    if heat_via_biomass:
+        # Efficiency changes due to biomass
+        eff_bio = s_ued["Biomass and waste"] / s_fec["Biomass and waste"]
+        df.loc["biomass", sector] += s_ued["Paper: Paper machine - Steam use"] / eff_bio
+    else:
+        df.loc["elec", sector] += s_ued["Paper: Paper machine - Steam use"]
+
 
     s_fec = idees["fec"][68:79]
     s_ued = idees["ued"][68:79]
     assert s_fec.index[0] == "Paper: Product finishing - Steam use"
     assert s_ued.index[0] == "Paper: Product finishing - Steam use"
 
-    # Efficiency changes due to biomass
-    eff_bio = s_ued["Biomass and waste"] / s_fec["Biomass and waste"]
-    df.loc["biomass", sector] += s_ued["Paper: Product finishing - Steam use"] / eff_bio
+    if heat_via_biomass:
+        # Efficiency changes due to biomass
+        eff_bio = s_ued["Biomass and waste"] / s_fec["Biomass and waste"]
+        df.loc["biomass", sector] += s_ued["Paper: Product finishing - Steam use"] / eff_bio
+    else:
+        df.loc["elec", sector] += s_ued["Paper: Product finishing - Steam use"] 
 
     s_out = idees["out"][9:10]
     assert sector in str(s_out.index)
@@ -1036,8 +1047,12 @@ def food_beverages_tobacco():
         s_ued["Food: Process cooling and refrigeration"] / eff_elec
     )
 
-    # Steam processing goes all to biomass without change in efficiency
-    df.loc["biomass", sector] += s_fec["Food: Steam processing"]
+    if heat_via_biomass:
+        # Steam processing goes all to biomass without change in efficiency
+        df.loc["biomass", sector] += s_fec["Food: Steam processing"]
+    else:
+        df.loc["elec", sector] += s_fec["Food: Steam processing"]
+
 
     # add electricity from process that is already electrified
     df.loc["elec", sector] += s_fec["Food: Electric machinery"]
@@ -1290,9 +1305,13 @@ def transport_equipment():
     df.loc["elec", sector] += s_fec["Trans. Eq.: General machinery"]
     df.loc["elec", sector] += s_fec["Trans. Eq.: Product finishing"]
 
-    # Steam processing is supplied with biomass
-    eff_biomass = s_ued["Biomass and waste"] / s_fec["Biomass and waste"]
-    df.loc["biomass", sector] += s_ued["Trans. Eq.: Steam processing"] / eff_biomass
+    if heat_via_biomass:
+        # Steam processing is supplied with biomass
+        eff_biomass = s_ued["Biomass and waste"] / s_fec["Biomass and waste"]
+        df.loc["biomass", sector] += s_ued["Trans. Eq.: Steam processing"] / eff_biomass
+    else:
+        df.loc["elec", sector] += s_ued["Trans. Eq.: Steam processing"]
+
 
     s_out = idees["out"][3:4]
     assert "Physical output" in str(s_out.index)
@@ -1342,9 +1361,14 @@ def machinery_equipment():
     df.loc["elec", sector] += s_fec["Mach. Eq.: General machinery"]
     df.loc["elec", sector] += s_fec["Mach. Eq.: Product finishing"]
 
-    # Steam processing is supplied with biomass
-    eff_biomass = s_ued["Biomass and waste"] / s_fec["Biomass and waste"]
-    df.loc["biomass", sector] += s_ued["Mach. Eq.: Steam processing"] / eff_biomass
+    if heat_via_biomass:
+        # Steam processing is supplied with biomass
+        eff_biomass = s_ued["Biomass and waste"] / s_fec["Biomass and waste"]
+        df.loc["biomass", sector] += s_ued["Mach. Eq.: Steam processing"] / eff_biomass
+    
+    else:
+        df.loc["elec", sector] += s_ued["Mach. Eq.: Steam processing"]
+
 
     s_out = idees["out"][3:4]
     assert "Physical output" in str(s_out.index)
@@ -1386,14 +1410,21 @@ def textiles_and_leather():
     df.loc["elec", sector] += s_fec["Textiles: Electric general machinery"]
     df.loc["elec", sector] += s_fec["Textiles: Finishing Electric"]
 
-    # Steam processing is supplied with biomass
-    eff_biomass = s_ued[15:26]["Biomass and waste"] / s_fec[15:26]["Biomass and waste"]
-    df.loc["biomass", sector] += (
-        s_ued["Textiles: Pretreatment with steam"] / eff_biomass
-    )
-    df.loc["biomass", sector] += (
-        s_ued["Textiles: Wet processing with steam"] / eff_biomass
-    )
+
+    if heat_via_biomass:
+        # Steam processing is supplied with biomass
+        eff_biomass = s_ued[15:26]["Biomass and waste"] / s_fec[15:26]["Biomass and waste"]
+        df.loc["biomass", sector] += (
+            s_ued["Textiles: Pretreatment with steam"] / eff_biomass
+        )
+        df.loc["biomass", sector] += (
+            s_ued["Textiles: Wet processing with steam"] / eff_biomass
+        )
+
+    else:
+        df.loc["elec", sector] += s_ued["Textiles: Pretreatment with steam"]
+        df.loc["elec", sector] += s_ued["Textiles: Wet processing with steam"]
+
 
     s_out = idees["out"][3:4]
     assert "Physical output" in str(s_out.index)
@@ -1434,11 +1465,15 @@ def wood_and_wood_products():
     df.loc["elec", sector] += s_fec["Wood: Electric mechanical processes"]
     df.loc["elec", sector] += s_fec["Wood: Finishing Electric"]
 
-    # Steam processing is supplied with biomass
-    eff_biomass = s_ued[15:25]["Biomass and waste"] / s_fec[15:25]["Biomass and waste"]
-    df.loc["biomass", sector] += (
-        s_ued["Wood: Specific processes with steam"] / eff_biomass
-    )
+    if heat_via_biomass:
+        # Steam processing is supplied with biomass
+        eff_biomass = s_ued[15:25]["Biomass and waste"] / s_fec[15:25]["Biomass and waste"]
+        df.loc["biomass", sector] += (
+            s_ued["Wood: Specific processes with steam"] / eff_biomass
+        )
+    else:
+        df.loc["elec", sector] += s_ued["Wood: Specific processes with steam"]
+
 
     s_out = idees["out"][3:4]
     assert "Physical output" in str(s_out.index)
@@ -1493,11 +1528,15 @@ def other_industrial_sectors():
     key = "Other Industrial sectors: Electric machinery"
     df.loc["elec", sector] += s_fec[key]
 
-    # Steam processing is supplied with biomass
-    eff_biomass = s_ued[15:25]["Biomass and waste"] / s_fec[15:25]["Biomass and waste"]
-    df.loc["biomass", sector] += (
-        s_ued["Other Industrial sectors: Steam processing"] / eff_biomass
-    )
+    if heat_via_biomass:
+        # Steam processing is supplied with biomass
+        eff_biomass = s_ued[15:25]["Biomass and waste"] / s_fec[15:25]["Biomass and waste"]
+        df.loc["biomass", sector] += (
+            s_ued["Other Industrial sectors: Steam processing"] / eff_biomass
+        )
+    else:
+        df.loc["elec", sector] += s_ued["Other Industrial sectors: Steam processing"]
+
 
     s_out = idees["out"][3:4]
     assert "Physical output" in str(s_out.index)
@@ -1522,6 +1561,15 @@ if __name__ == "__main__":
     params = snakemake.params.industry
 
     year = params["reference_year"]
+
+    global heat_via_biomass
+    heat_via_biomass = params.get("heat_via_biomass", True)
+    logger.info(f"heat_via_biomass: {heat_via_biomass}")
+
+
+    # if biomass it goes the typical way of pypsa-eur otherwise, use electricity with an efficiency of 100%
+
+
 
     df = pd.concat(
         [
