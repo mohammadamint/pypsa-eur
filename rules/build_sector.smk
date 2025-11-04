@@ -573,6 +573,8 @@ rule build_energy_totals:
         countries=config_provider("countries"),
         energy=config_provider("energy"),
     input:
+        aviation_navigation_ratios = "data/additional_data/fraction_aviation_navigation.csv",
+        aviation_navigation = "data/additional_data/aviation_and_navigation.csv",
         nuts3_shapes=resources("nuts3_shapes.geojson"),
         co2="data/bundle/eea/UNFCCC_v23.csv",
         swiss="data/switzerland-new_format-all_years.csv",
@@ -933,6 +935,7 @@ rule build_industrial_energy_demand_per_node:
         industrial_energy_demand_per_node_today=resources(
             "industrial_energy_demand_today_base_s_{clusters}.csv"
         ),
+        industry_demand_overwrite = "data/additional_data/industry_demand_overwrite.csv",
     output:
         industrial_energy_demand_per_node=resources(
             "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"

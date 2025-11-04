@@ -31,6 +31,15 @@ from scripts._helpers import configure_logging, set_scenario_config
 
 logger = logging.getLogger(__name__)
 
+def apply_overrides(industry_demand: pd.DataFrame, industry_demand_: str):
+    ALL_COLS = ['low-temperature heat', 'methanol', 'hydrogen', 'naphtha', 'solid biomass', 'electricity', 'methane', 'ammonia', 'coal', 'coke']
+
+    industry_demand_overwrite = pd.read_csv(industry_demand_, index_col = 0)
+    industry_demand.update(industry_demand_overwrite[ALL_COLS])
+    industry_demand = industry_demand.round(2)
+
+    return industry_demand
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
@@ -81,4 +90,7 @@ if __name__ == "__main__":
     nodal_df.index.name = "TWh/a (MtCO2/a)"
 
     fn = snakemake.output.industrial_energy_demand_per_node
+
+    nodal_df = apply_overrides(nodal_df, snakemake.input.industry_demand_overwrite)
+
     nodal_df.to_csv(fn, float_format="%.2f")

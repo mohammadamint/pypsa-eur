@@ -1570,6 +1570,48 @@ def build_heating_efficiencies(
 
     return heating_efficiencies
 
+def apply_overrides(energy: pd.DataFrame, data: str, ratios: str) -> pd.DataFrame:
+    """
+    Overwrite selected aviation/navigation columns in `energy` with values from `data`, scaled by ratios.
+    """
+
+    AVIATION_COLS = [
+        "total aviation passenger",
+        "total aviation freight",
+        "total domestic aviation passenger",
+        "total international aviation passenger",
+        "total domestic aviation freight",
+        "total international aviation freight",
+        "total domestic aviation",
+        "total international aviation"
+    ]
+
+    NAVIGATION_COLS = [
+        "total domestic navigation",
+        "total international navigation"
+    ]
+
+    ALL_COLS = AVIATION_COLS + NAVIGATION_COLS
+
+    energy = energy.reset_index()
+
+    data_in = pd.read_csv(data)[['country', 'navigation', 'aviation']]
+    ratios_in = pd.read_csv(ratios)
+    override = pd.merge(ratios_in, data_in, how='inner', on='country')
+
+    for col in AVIATION_COLS:
+        override[col] *= override['aviation']
+
+    for col in NAVIGATION_COLS:
+        override[col] *= override['navigation']
+
+    energy = energy.set_index(["country", "year"])
+    override = override.set_index(["country", "year"])
+
+    energy.update(override[ALL_COLS])
+
+    return energy
+
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
@@ -1606,6 +1648,9 @@ if __name__ == "__main__":
     energy = build_energy_totals(countries, eurostat, swiss, idees)
 
     update_residential_from_eurostat(energy)
+
+    # MANUAL OVERRIDES OF AVIATION AND NAVIGATION
+    energy = apply_overrides(energy, snakemake.input.aviation_navigation, snakemake.input.aviation_navigation_ratios)
 
     energy.to_csv(snakemake.output.energy_name)
 
