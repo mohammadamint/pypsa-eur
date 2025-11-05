@@ -45,8 +45,18 @@ tax_value = config["solving"]["constraints"]["import_tax"]["hydrogen"]["tax_valu
         "overwrite_technical_potentials", False
     ):
         renewable_technical_social_potential(n)
-        
+     
+    if config.get("solving", {}).get("constraints",{}
+    ).get(
+        "oil_supply_constraint", {}
+    ).get("enable", False):
+        add_liquid_supply_constraint(
+            n=n,
+            supply_data_path=config["solving"]["constraints"]["oil_supply_constraint"]["path"],
 
+        )
+                                     
+        
 
         
 def get_carrier_capacity_at_country(n,buses,carrier):
@@ -490,3 +500,32 @@ def renewable_technical_social_potential(n):
 
             except KeyError:
                 pass
+
+def add_liquid_supply_constraint(n,supply_data_path,):
+    # add supply constraint over oil products
+
+    timesteps = n.snapshot_weightings.iloc[0,0]
+    logger.info(f"adding liquid supply global constraint from file: {supply_data_path}.")
+    supply_data = pd.read_csv(supply_data_path,index_col=1) #TWh to MWh and splited over timesteps
+
+    e_fuel = (["Fischer-Tropsch"],["e_diesel","e_kerosene"])
+    biofuel = (["biomass to liquid","electrobiofuels"],["biofuel"])
+    fossil = (["oil refining"],[])
+
+
+    for name,info in dict(e_fuel=e_fuel,biofuel=biofuel,fossil=fossil).items():
+
+        category,constraint = info
+
+        if constraint:
+            
+            logger.info(f"--> {category}: {supply_data[constraint].sum().sum()*1000000}.")
+            
+            links = n.links.loc[n.links.carrier.isin(category)].index
+
+            prod = n.model["Link-p"].sel({"Link":links}).sum()
+
+            n.model.add_constraints(
+                prod*timesteps >= supply_data[constraint].sum().sum()*1000000,
+                name = "min_prod_{}".format(name)
+            )

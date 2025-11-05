@@ -35,8 +35,13 @@ def apply_overrides(industry_demand: pd.DataFrame, industry_demand_: str):
     ALL_COLS = ['low-temperature heat', 'methanol', 'hydrogen', 'naphtha', 'solid biomass', 'electricity', 'methane', 'ammonia', 'coal', 'coke']
 
     industry_demand_overwrite = pd.read_csv(industry_demand_, index_col = 0)
+    print(industry_demand_overwrite)
+    print(industry_demand)
+    
     industry_demand.update(industry_demand_overwrite[ALL_COLS])
     industry_demand = industry_demand.round(2)
+    
+    print(industry_demand)
 
     return industry_demand
 
