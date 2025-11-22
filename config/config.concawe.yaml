@@ -40,15 +40,23 @@ countries:
     - SK
     
 lines:
-  max_extension: 10000 #MW
+  max_extension: 15000 #MW
   
 links:
-  max_extension: 10000 #MW
+  max_extension: 25000 #MW
 
 industry:
     heat_via_biomass: false
     
+    
+electricity: # consider nuclear capacitiy expansion everwhere and limit it in the custom constraints
+  extendable_carriers:
+    Generator: [solar, solar-hsat, onwind, offwind-ac, offwind-dc, offwind-float, OCGT, CCGT,nuclear]
+  everywhere_powerplants: [nuclear]
+  
+  
 sector:
+
   land_transport_fuel_cell_share:
     2050: 0.1874
     
@@ -73,9 +81,10 @@ sector:
   biomass_transport: true # in this case it can move wiht a cost
   biomass_to_liquid: false
   biomass_to_liquid_cc: true
-  electrobiofuels: true
-  
-  H2_retrofit: true
+  electrobiofuels: false
+
+  H2_network: true
+  H2_retrofit: false
   methanol:
     methanol_to_power:
       ccgt: false
@@ -90,7 +99,8 @@ sector:
   use_methanation_waste_heat: false
   use_fuel_cell_waste_heat: false
   use_electrolysis_waste_heat: false
-
+  co2_sequestration_potential:
+    2050: 266
   district_heating:
     potential:
         default: 0 # keep the district_heating as it is today,
@@ -129,23 +139,78 @@ sector:
         SI: 0.1
         SK: 0.15
         XK: 0.03
+        
+  imports:
+    enable: true
+    # limit: 10000000000
 
+    limit_sense: <=
+    price:
+      NH3: 97
+      # methanol: 121
+      oil: 125
+      
+  methanol:
+    methanol_reforming: false
+    methanol_reforming_cc: false
+    
 # adding custom constraints
 solving:
+  # solver:
+  #   name: gurobi
+  #   options: gurobi-numeric-focus
+    
+  options:
+    curtailment_mode: false
   constraints:
+  
+    min_cap_constraint:
+        enable: true
+        path: "data/additional_data/min_cap_2050_DE.csv"
+        ratio: 0.75
+        countries: "all"
+            # - AT
+            # - BE
+            # - BG
+            # - CH
+            # - CZ
+            # - DE
+            # - DK
+            # - EE
+            # - ES
+            # - FI
+            # - FR
+            # - GB
+            # - GR
+            # - HR
+            # - HU
+            # - IE
+            # - IT
+            # - LT
+            # - LU
+            # - LV
+            # - NL
+            # - "NO"
+            # - PL
+            # - PT
+            # - RO
+            # - SE
+            # - SI
+            # - SK
+        nuclear: true
   
     oil_supply_constraint:
         enable: true
         path: "data/additional_data/liquid_supply.csv"
-        
+
     import_tax:
-        enable: false
+        enable: true
         electricity: 
             tax_value: 20 #eur/mwh
-            max_import_share: 0.3 #percent of electricity demand as maximum constraint for import
+            max_import_share: 0.3 #if import is more than the max_import_share * demand will be taxed
         hydrogen: 
             tax_value: 20 #eur/mwh
-            max_import_share: 1 #percent of hydrogen demand as maximum constraint for import
+            max_import_share: 0.75 #if import is more than the max_import_share * demand will be taxed
       
     firm_capacity:
         enable: true
@@ -157,37 +222,32 @@ solving:
             "nuclear": 0.9
             "H2 turbine": 0.9
             "H2 Fuel Cell": 0.9
-            # "hydro": 0.9
-            # "PHS": 0.5
-            # "battery": 0.5
-            # "home battery": 0.5
+            "hydro": 0.9
+            "PHS": 0.5
+            "battery": 0.5
+            "home battery": 0.5
             
     overwrite_technical_potentials: true
-    
-  # solver_options:
-  #   gurobi-default:
-  #     threads: 32
-  #     method: 2 # barrier
-  #     crossover: 0
-  #     BarConvTol: 1.e-5
-  #     OptimalityTol: 1e-5     # default is 1e-6
-  #     FeasibilityTol: 1e-5    # default is 1e-6
-  #     Seed: 123
-  #     AggFill: 0
-  #     PreDual: 0
-  #     GURO_PAR_BARDENSETHRESH: 200
-      
+    import_constraints:
+        sense: ">="
+        carriers: 
+            NH3: 893520000 # 612 TWh * 1.46 (efficiency of ammonia cracker)
+            oil: 152000000
 clustering:
   temporal:
     resolution_sector: 3h
+    
+snapshots:
+  start: "2013-01-01"
+  end: "2014-01-01"
+  inclusive: 'left'
 
-# costs:
-#   overwrites: {}
-#   capital_cost:
-#     "HVDC inverter pair": 215543.95174 # 165803.0398*1.3
-#     "HVDC overhead": 574.78382 # 442.1414*1.3
-#     "HVDC submarine": 1310.78142 # 1008.2934*1.3
-#     "HVDC underground": 1310.78142 # 1008.2934*1.3
+
+  capital_cost:
+    "HVDC inverter pair": 215543.95174 # 165803.0398*1.3
+    "HVDC overhead": 574.78382 # 442.1414*1.3
+    "HVDC submarine": 1310.78142 # 1008.2934*1.3
+    "HVDC underground": 1310.78142 # 1008.2934*1.3
     
 
 

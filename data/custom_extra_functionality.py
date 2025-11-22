@@ -12,52 +12,88 @@ logger = logging.getLogger(__name__)
 def custom_extra_functionality(n, snapshots, snakemake):
     config = snakemake.config
     
-    if config.get("solving", {}).get("constraints",{}
-    ).get(
-        "firm_capacity", {}
-    ).get("enable",False):
-        add_Firm_Capacity_Constraint(
-            n = n,
-            capacity_shares = config["solving"]["constraints"]["firm_capacity"]["capacity_shares"],
-            firm_share = config["solving"]["constraints"]["firm_capacity"]["max_demand_hour_share"],
-        )
+#     if config.get("solving", {}).get("constraints",{}
+#     ).get(
+#         "firm_capacity", {}
+#     ).get("enable",False):
+#         add_Firm_Capacity_Constraint(
+#             n = n,
+#             capacity_shares = config["solving"]["constraints"]["firm_capacity"]["capacity_shares"],
+#             firm_share = config["solving"]["constraints"]["firm_capacity"]["max_demand_hour_share"],
+#         )
         
         
-    if config.get("solving", {}).get("constraints",{}
-    ).get(
-        "import_tax", {}
-    ).get("enable", False):
-        add_electricity_trade_tax(
-            n = n,
-            tax_value = config["solving"]["constraints"]["import_tax"]["electricity"]["tax_value"],
-            max_import_share = config["solving"]["constraints"]["import_tax"]["electricity"]["max_import_share"],
+#     if config.get("solving", {}).get("constraints",{}
+#     ).get(
+#         "import_tax", {}
+#     ).get("enable", False):
+#         add_electricity_trade_tax(
+#             n = n,
+#             tax_value = config["solving"]["constraints"]["import_tax"]["electricity"]["tax_value"],
+#             max_import_share = config["solving"]["constraints"]["import_tax"]["electricity"]["max_import_share"],
             
-        )
+#         )
 
-        add_hydrogen_import_tax(
-n = n,
-max_import_share = config["solving"]["constraints"]["import_tax"]["hydrogen"]["max_import_share"],
-tax_value = config["solving"]["constraints"]["import_tax"]["hydrogen"]["tax_value"]
-)
+#         add_hydrogen_import_tax(
+#             n = n,
+#             max_import_share = config["solving"]["constraints"]["import_tax"]["hydrogen"]["max_import_share"],
+#             tax_value = config["solving"]["constraints"]["import_tax"]["hydrogen"]["tax_value"]
+#         )
 
-    if config.get("solving", {}).get("constraints",{}
-    ).get(
-        "overwrite_technical_potentials", False
-    ):
-        renewable_technical_social_potential(n)
+#     if config.get("solving", {}).get("constraints",{}
+#     ).get(
+#         "overwrite_technical_potentials", False
+#     ):
+#         renewable_technical_social_potential(
+#             n,        
+#             tyndp_path=config["solving"]["constraints"]["min_cap_constraint"]["path"],
+#             ratio = config["solving"]["constraints"]["min_cap_constraint"]["ratio"], 
+#         )
      
-    if config.get("solving", {}).get("constraints",{}
-    ).get(
-        "oil_supply_constraint", {}
-    ).get("enable", False):
-        add_liquid_supply_constraint(
-            n=n,
-            supply_data_path=config["solving"]["constraints"]["oil_supply_constraint"]["path"],
-
-        )
-                                     
+#     if config.get("solving", {}).get("constraints",{}
+#     ).get(
+#         "oil_supply_constraint", {}
+#     ).get("enable", False):
+#         add_liquid_supply_constraint(
+#             n=n,
+#             supply_data_path=config["solving"]["constraints"]["oil_supply_constraint"]["path"],
+#         )
         
+#         # max_electrolyzer(n)
+        
+#     # if config.get("solving", {}).get("constraints",{}
+#     # ).get(
+#     #     "min_cap_constraint", {}
+#     # ).get("enable", False):
+#     min_capacity_constraint_by_tyndp(
+#         n=n,
+#         tyndp_path=config["solving"]["constraints"]["min_cap_constraint"]["path"],
+#         ratio = config["solving"]["constraints"]["min_cap_constraint"]["ratio"],
+#         countries = config["solving"]["constraints"]["min_cap_constraint"]["countries"],
+#         nuclear = config["solving"]["constraints"]["min_cap_constraint"]["nuclear"],
+#     )    
+    
+    
+#     min_import_level(
+#         n = n,
+#         import_constraints=config["solving"]["constraints"]["import_constraints"]
+#     )
 
+def get_tyndp_caps(tyndp_caps,ratio,tech_category_tyndp,country):
+
+    return tyndp_caps.loc[
+                    (tyndp_caps["loc"].str.startswith(dict(GB="UK").get(country,country))) &
+                    (tyndp_caps["tech"].isin(tech_category_tyndp))
+                ].energy_cap.sum() * ratio
+
+def max_electrolyzer(n):
+    logger.info(f"adding max electrilyzer constraint")
+    links = n.links.loc[
+        n.links.carrier == "H2 Electrolysis"
+    ].index
+    
+    totcap = n.model["Link-p_nom"].sel({"Link-ext":links}).sum()
+    n.model.add_constraints(totcap<=200000,name="max electrolyzers")
         
 def get_carrier_capacity_at_country(n,buses,carrier):
     
@@ -159,11 +195,11 @@ def add_hydrogen_import_tax(n,max_import_share,tax_value):
         intermediate_demand_in_country = intermediate_carriers.loc[intermediate_carriers.index.str.startswith(cc)].index
         demand = end_use_demand.loc[cc] + n.model["Link-p"].sel({"Link":intermediate_demand_in_country}).sum()
         
+        LimitBalance = balance - max_import_share*demand
         ProcessToBeTaxed = n.model.add_variables(lower=0, name=f"trade_tax_H2_{cc}")
-        n.model.add_constraints(ProcessToBeTaxed>= balance, name=f"trade_tax_H2_{cc}_pos")
+        n.model.add_constraints(ProcessToBeTaxed>= LimitBalance, name=f"trade_tax_H2_{cc}_pos")
         objective+= ProcessToBeTaxed * tax_value
-        if max_import_share != 1:
-            n.model.add_constraints(ProcessToBeTaxed<= max_import_share * demand, name=f"trade_tax_H2_{cc}")
+
             
     n.model.add_objective(objective,overwrite=True)
             
@@ -209,87 +245,7 @@ def add_Firm_Capacity_Constraint(n,capacity_shares,firm_share):
             lhs >= rhs, name = f"firm_capacity_{bus}"
         )
 
-        
-# def add_electricity_trade_tax(n,tax_value,max_import_share):
 
-#     loads = n.loads_t.p
-#     buses = n.loads.loc[n.loads.carrier.str.contains("electric")].index
-
-
-#     profile = n.loads_t.p_set
-#     profile = profile[profile.columns.intersection(buses)]
-#     profile.columns = [x[:2] for x in profile.columns]
-
-#     fix = n.loads
-#     fix = fix.loc[buses.difference(profile.columns),"p_set"]
-#     fix.index = [x[:2] for x in fix.index]
-
-#     # since demand is the average value, there is no nead to multiply it with the weight of the snapshot
-#     annual_demand = (
-#         fix.groupby(level=0).sum()*len(n.snapshots) + profile.sum()
-#     ) 
-
-#     country = n.buses.country.unique()
-#     objective = n.model.objective.expression
-
-#     for cc in country:
-#         if cc == "":
-#             continue
-
-#         country_buses = n.buses.loc[(n.buses.country == cc) & (n.buses.carrier == "AC")].index
-
-#         links = n.links[n.links.carrier == "DC"]
-
-#         # 3. Add country codes for both ends
-#         links["country0"] = links["bus0"].str[:2]
-#         links["country1"] = links["bus1"].str[:2]
-
-#         # p0
-#         exports = links.loc[
-#             (links["country0"] != links["country1"])
-#             & (links["country0"] == cc)
-#         ].index
-
-#         # p1
-#         imports = links.loc[
-#             (links["country0"] != links["country1"])
-#             & (links["country1"] == cc)
-#         ].index
-
-
-#         balance_DC = n.model["Link-p"].sel({"Link":imports}).sum() - n.model["Link-p"].sel({"Link":exports}).sum()
-        
-#         # AC
-#         lines = n.lines[n.lines.carrier == "AC"]
-
-#         lines["country0"] = lines["bus0"].str[:2]
-#         lines["country1"] = lines["bus1"].str[:2]
-
-#         # p0
-#         exports = lines.loc[
-#             (lines["country0"] != lines["country1"])
-#             & (lines["country0"] == cc)
-#         ].index
-
-#         # p1
-#         imports = lines.loc[
-#             (lines["country0"] != lines["country1"])
-#             & (lines["country1"] == cc)
-#         ].index
-
-#         balance_AC = n.model["Line-s"].sel({"Line":imports}).sum() - n.model["Line-s"].sel({"Line":exports}).sum()
-
-#         balance = balance_DC + balance_AC
-
-#         ProcessToBeTaxed = n.model.add_variables(lower=0, name=f"trade_tax_electricity_{cc}")
-
-#         n.model.add_constraints(ProcessToBeTaxed>= balance, name=f"trade_tax_electricity_{cc}_pos")
-#         n.model.add_constraints(ProcessToBeTaxed<= max_import_share * annual_demand.loc[cc].sum(), name=f"trade_tax_electricity_{cc}")
-
-#         objective+= ProcessToBeTaxed * tax_value
-
-#     n.model.add_objective(objective,overwrite=True)
-    
 
 def get_electricity_intermediate_demand(n,cc):
 
@@ -319,6 +275,8 @@ def get_electricity_intermediate_demand(n,cc):
     return var.sel({"Link":idx}).sum()
 
 def add_electricity_trade_tax(n,tax_value,max_import_share):
+    
+    logger.info(f"adding import tax of {tax_value} on electricity with a maximum import limit of {max_import_share*100}%.")
 
     loads = n.loads_t.p
     buses = n.loads.loc[n.loads.carrier.str.contains("electric")].index
@@ -385,14 +343,15 @@ def add_electricity_trade_tax(n,tax_value,max_import_share):
 
         balance = balance_DC + balance_AC
 
-        ProcessToBeTaxed = n.model.add_variables(lower=0, name=f"trade_tax_electricity_{cc}")
-        n.model.add_constraints(ProcessToBeTaxed>= balance, name=f"trade_tax_electricity_{cc}_pos")
+        total_demand = annual_demand.loc[cc].sum() + get_electricity_intermediate_demand(n,cc)
+        LimitBlance = balance - max_import_share * total_demand
+        
+        ProcessToBeTaxed = n.model.add_variables(lower=0,name=f"trade_tax_electricity_{cc}")
+        n.model.add_constraints(ProcessToBeTaxed>= LimitBlance, name=f"trade_tax_electricity_{cc}_pos")
+        
         objective+= ProcessToBeTaxed * tax_value
-        if max_import_share != 1:
-            n.model.add_constraints(
-                ProcessToBeTaxed<= max_import_share * (annual_demand.loc[cc].sum() + get_electricity_intermediate_demand(n,cc)) ,
-                name=f"trade_tax_electricity_{cc}"
-            )
+            
+            # read more carefully wouter email!
 
     n.model.add_objective(objective,overwrite=True)
     
@@ -409,7 +368,7 @@ def get_adjusted_potential(p_nom_max_jrc,p_nom_max_calliope,p_nom_min,threshold=
         return max(p_nom_max,p_nom_min)     
 
 # later do this at regional level
-def renewable_technical_social_potential(n):
+def renewable_technical_social_potential(n,tyndp_path,ratio):
     
     logger.info(f"overriding the maximum technical potential of solar/onwind/offwind.")
     
@@ -417,17 +376,21 @@ def renewable_technical_social_potential(n):
     jrc_potentials.index = [idx[0:2] for idx in jrc_potentials.index]
     jrc_potentials = jrc_potentials.groupby(level=0).sum()
 
+    tyndp_caps = pd.read_csv(tyndp_path)
+
+
     calliope_potentials = pd.read_csv("data/technical-social-potential/capacities.csv",index_col=0).round(0)
-    
+
     solar = [
-        "solar","solar-hsat"
+        "solar","solar-hsat","solar rooftop"
     ]
+
 
     onwind = ["onwind"]
 
     offwind = [
-        "offwind-ac," 
-        "offwind-dc," 
+        "offwind-ac", 
+        "offwind-dc",
         "offwind-float",
     ] 
 
@@ -441,23 +404,27 @@ def renewable_technical_social_potential(n):
         # get solar utility
         country = dict(UK="GB",EL="GR").get(country,country)
 
-        take = f"solar_capacity_gw_{scenario}_pv_ground"
+        take = f"solar_capacity_gw_{scenario}_total"
 
         idx = n.generators.loc[
             (n.generators.index.str.startswith(country))&
             (n.generators.carrier.isin(solar))
         ].index
 
+
+
         if not idx.empty:
             try:
                 p_nom_min = n.generators.loc[idx,"p_nom_min"].sum()
                 p_nom_max_jrc = jrc_potentials.loc[country,take]
-                p_nom_max_calliope = calliope_potentials.loc[country,"open_field_pv_mw"]
+                p_nom_max_calliope = calliope_potentials.loc[country,["open_field_pv_mw","rooftop_pv_mw"]].sum()
+                tyndp = get_tyndp_caps(tyndp_caps,ratio,["pv","dres_pv","pv_rete"],country)
                 p_nom_max = get_adjusted_potential(p_nom_max_jrc,p_nom_max_calliope,p_nom_min)
                 n.model.add_constraints( 
-                    n.model["Generator-p_nom"].sel({"Generator-ext":idx}).sum() <= p_nom_max,
+                    n.model["Generator-p_nom"].sel({"Generator-ext":idx}).sum() <= max(p_nom_max,tyndp),
                     name=f"realistic_solar_capacity_{country}"
                 )
+
             except KeyError:
                 pass
 
@@ -475,8 +442,9 @@ def renewable_technical_social_potential(n):
                 p_nom_max_jrc = jrc_potentials.loc[country,take]
                 p_nom_max_calliope = calliope_potentials.loc[country,"onshore_wind_mw"]
                 p_nom_max = get_adjusted_potential(p_nom_max_jrc,p_nom_max_calliope,p_nom_min)
+                tyndp = get_tyndp_caps(tyndp_caps,ratio,["dres_wind_onshore","wind_onshore"],country)
                 n.model.add_constraints( 
-                    n.model["Generator-p_nom"].sel({"Generator-ext":idx}).sum() <= p_nom_max,
+                    n.model["Generator-p_nom"].sel({"Generator-ext":idx}).sum() <= max(p_nom_max,tyndp),
                     name=f"realistic_onwind_capacity_{country}"
                 )
             except KeyError:
@@ -493,8 +461,10 @@ def renewable_technical_social_potential(n):
                 p_nom_min = n.generators.loc[idx,"p_nom_min"].sum()
                 p_nom_max_calliope = calliope_potentials.loc[country,"offshore_wind_mw"]
                 p_nom_max = get_adjusted_potential(0,p_nom_max_calliope,p_nom_min)
+                tyndp = get_tyndp_caps(tyndp_caps,ratio,["ac_fix_based_offshore_radial","ac_floating_offshore_radial","dc_fix_based_offshore_hub","dc_fix_based_offshore_radial","dc_floating_offshore_hub","dc_floating_offshore_radial"],country)
+
                 n.model.add_constraints( 
-                    n.model["Generator-p_nom"].sel({"Generator-ext":idx}).sum() <= p_nom_max,
+                    n.model["Generator-p_nom"].sel({"Generator-ext":idx}).sum() <= max(p_nom_max,tyndp),
                     name=f"realistic_offwind_capacity_{country}"
                 )
 
@@ -509,7 +479,7 @@ def add_liquid_supply_constraint(n,supply_data_path,):
     supply_data = pd.read_csv(supply_data_path,index_col=1) #TWh to MWh and splited over timesteps
 
     e_fuel = (["Fischer-Tropsch"],["e_diesel","e_kerosene"])
-    biofuel = (["biomass to liquid","electrobiofuels"],["biofuel"])
+    biofuel = (["biomass to liquid","electrobiofuels","biomass to liquid CC"],["biofuel"])
     fossil = (["oil refining"],[])
 
 
@@ -529,3 +499,122 @@ def add_liquid_supply_constraint(n,supply_data_path,):
                 prod*timesteps >= supply_data[constraint].sum().sum()*1000000,
                 name = "min_prod_{}".format(name)
             )
+            
+            
+def min_capacity_constraint_by_tyndp(n,ratio,tyndp_path,countries,nuclear):
+    
+    logger.info(f"adding minimum capacity conctraints accordign to tyndp24 scenario results by a ratio of {ratio}, loaded from {tyndp_path}.")
+    if nuclear:
+        logger.info(f"adding the capacity of nuclear as the max(p_nom,tyndp24).")
+    
+    tyndp_caps = pd.read_csv(tyndp_path)
+
+    solar = (["solar","solar-hsat","solar rooftop"],["pv","dres_pv","pv_rete"])
+
+    onwind = (["onwind"],["dres_wind_onshore","wind_onshore"])
+
+
+    offwind = (
+        ["offwind-ac", "offwind-dc", "offwind-float"], ["ac_fix_based_offshore_radial","ac_floating_offshore_radial","dc_fix_based_offshore_hub","dc_fix_based_offshore_radial","dc_floating_offshore_hub","dc_floating_offshore_radial"]
+    ) 
+    
+    
+    if countries == "all":
+        countries = n.buses.country.unique()
+        
+    for country in countries:
+
+        if country == "":
+            continue
+
+        for tech_category_pypsa,tech_category_tyndp in [
+            solar,
+            onwind,
+            offwind
+            ]:
+
+            pypsa_idx = n.generators.loc[
+                (n.generators.index.str.startswith(country))&
+                (n.generators.carrier.isin(tech_category_pypsa))
+            ].index     
+
+            tyndp_cap_idx = get_tyndp_caps(tyndp_caps,ratio,tech_category_tyndp,country)
+
+            pypsa_cap_max = n.generators.loc[pypsa_idx,"p_nom_max"].sum()
+
+            if not pypsa_idx.empty  and tyndp_cap_idx != 0:
+                var = n.model["Generator-p_nom"].sel({"Generator-ext":pypsa_idx}).sum()
+                lower_bound = tyndp_cap_idx * ratio
+
+                if lower_bound > pypsa_cap_max:
+                    lower_bound = pypsa_cap_max
+
+                
+                
+                n.model.add_constraints(
+                    var >= lower_bound,
+                    name = "tyndp_min_"+",".join(tech_category_pypsa) + "_" + country
+                )
+                
+        if nuclear:
+            
+            tyndp_cap = tyndp_caps.loc[
+                (tyndp_caps["loc"] == dict(GB="UK").get(country,country)) &
+                (tyndp_caps["tech"] == "nuclear_pp")
+            ].energy_cap.sum()
+
+            pypsa_cap = n.generators.loc[
+            (n.generators.carrier == "nuclear") & (n.generators.index.str.startswith(country))
+            ].p_nom.sum()
+
+            constraint = max(tyndp_cap,pypsa_cap)
+
+            idx = n.generators.loc[
+                (n.generators.carrier == "nuclear") & (n.generators.index.str.startswith(country))
+            ].index
+
+            n.model.add_constraints(
+                n.model["Generator-p_nom"].sel({"Generator-ext":idx}).sum() == constraint,
+                name = "nuclear constraint in {}".format(country)
+            )
+
+            
+            
+def min_import_level(n,import_constraints):
+    carriers = import_constraints["carriers"]
+    sense = import_constraints["sense"]
+    
+    print(n.model.constraints)
+    for carrier,val in carriers.items():
+        constraint = val/8760
+        carrier_map = f"import {carrier}"
+        if carrier_map in n.generators.carrier.unique():
+            logger.info(f"adding constraint on import of {carrier_map} {sense} {constraint}")
+            idx = n.generators.loc[
+                    n.generators.carrier == carrier_map
+                ].index
+            var = n.model["Generator-p"].sel({"Generator":idx})
+            
+            n.model.add_constraints(
+                eval(f"var {sense} constraint"),
+                name = f"{carrier_map} {sense} {constraint}"
+            )
+
+        if carrier_map in n.links.carrier.unique():
+            logger.info(f"adding constraint on import of {carrier_map} {sense} {constraint}")
+            idx = n.links.loc[
+                    n.links.carrier == carrier_map
+                ].index
+            
+            eff = n.links.loc[
+                n.links.carrier == carrier_map
+            ].efficiency
+            var = n.model["Link-p"].sel({"Link":idx})
+
+            n.model.add_constraints(
+                eval(f"var {sense} constraint/eff"),
+                name = f"{carrier_map} {sense} {val}"
+            )
+
+        else:
+            continue

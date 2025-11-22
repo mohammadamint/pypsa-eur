@@ -242,7 +242,8 @@ def load_costs(
 
     # set all asset costs and other parameters
     costs = pd.read_csv(cost_file, index_col=[0, 1]).sort_index()
-
+    
+    costs.to_csv("before_fucking_costs.csv")
     # correct units to MW and EUR
     costs.loc[costs.unit.str.contains("/kW"), "value"] *= 1e3
     costs.loc[costs.unit.str.contains("/GW"), "value"] /= 1e3
@@ -322,6 +323,8 @@ def load_costs(
             idx = overwrites.index.intersection(costs.index)
             costs.loc[idx, attr] = overwrites.loc[idx]
             logger.info(f"Overwriting {attr} with:\n{overwrites}")
+            
+    costs.to_csv("fucking_costs.csv")
 
     return costs
 

@@ -31,6 +31,23 @@ run:
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
 foresight: overnight
 
+spores:
+    enable: true
+    config:
+      config_name: "maximize_H2_CCGT"
+      objective_sense: min
+      spores_slack: 0.1
+      num_spores: 1
+      weighting_method: "relative_deployment"
+      spores_mode: "intensify and diversify"  # Should be either "diversify" or "intensify and diversify"
+      diversification_coefficient: 0.00001 # Must be a positive number.
+      intensification_coefficient: -1  # Can be any number with positive for minimization and negative for maximization.
+      spore_technologies: # Target technologies when running SPORES.
+        - Link:
+            attribute: p_nom
+            index: ["H2 turbine"]
+      intensifiable_technologies: ["H2 turbine"] # Subset of spore_technologies to intensify (push to max or min deployment within slack).
+      
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#scenario
 # Wildcard docs in https://pypsa-eur.readthedocs.io/en/latest/wildcards.html
 scenario:
@@ -88,7 +105,7 @@ snapshots:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#enable
 enable:
-  retrieve: auto
+  retrieve: false
   retrieve_databundle: true
   retrieve_cost_data: true
   build_cutout: false
@@ -533,7 +550,6 @@ sector:
       aquifer_volumetric_heat_capacity: 2600
       fraction_of_aquifer_area_available: 0.2
       effective_screen_length: 20
-      dh_area_buffer: 1000
       capex_as_fraction_of_geothermal_heat_source: 0.75
       recovery_factor: 0.6
       marginal_cost_charger: 0.035
@@ -549,10 +565,15 @@ sector:
       geothermal:
         constant_temperature_celsius: 65
         ignore_missing_regions: false
+      river_water:
+        constant_temperature_celsius: false
     direct_utilisation_heat_sources:
     - geothermal
     temperature_limited_stores:
     - ptes
+    dh_areas:
+      buffer: 1000
+      handle_missing_countries: fill
   heat_pump_sources:
     urban central:
     - air
@@ -816,10 +837,10 @@ sector:
     limit: .inf
     limit_sense: <=
     price:
-      H2: 74
+      # H2: 74
       NH3: 97
-      methanol: 121
-      gas: 122
+      # methanol: 121
+      # gas: 122
       oil: 125
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry
@@ -894,7 +915,7 @@ industry:
     2025: 0.05
     2030: 0.2
     2035: 0.45
-    2040: 0.7
+    2040: 0.7250
     2045: 0.85
     2050: 1.0
   basic_chemicals_without_NH3_production_today: 69. #Mt/a, = 86 Mtethylene-equiv - 17 MtNH3

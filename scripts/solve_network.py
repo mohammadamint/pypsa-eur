@@ -52,6 +52,7 @@ from scripts._helpers import (
     update_config_from_wildcards,
 )
 
+from scripts.build_spores import run_spores
 logger = logging.getLogger(__name__)
 
 # Allow for PyPSA versions <0.35
@@ -1450,3 +1451,69 @@ if __name__ == "__main__":
             allow_unicode=True,
             sort_keys=False,
         )
+        
+    print(n.links)
+        
+    spores_config = snakemake.params.spores
+    
+    if spores_config.get("enable",False):
+        
+        logger.info("spores mode identified.")
+        
+        spores_run = {"SPORES": spores_config["config"]}
+        
+        # update the info
+# spore_technologies: # Target technologies when running SPORES.
+# - Link:
+#     attribute: p_nom
+#     index: ["H2 Turbine"]
+# intensifiable_technologies: ["H2 Turbine"]
+        
+        logger.info("spores config preparation with: {}".format(spores_config["config"]))
+        
+        spored_technologies = spores_config["config"]["spore_technologies"]
+        
+        st = []
+        for _ in spored_technologies:
+            for component,v in _.items():
+                k = component.lower() + "s"
+                df =getattr(n,k)
+                idx = df.loc[df.carrier.isin(v["index"])].index.tolist()
+                v["index"] = idx
+            st.append(_)
+            
+
+        spores_config["config"]["spore_technologies"] = st
+                
+        
+        intensifiable_technologies = spores_config["config"]["intensifiable_technologies"]
+        it = []
+        for x in ["links","generators","stores","storage_units"]:
+            df = getattr(n,x)
+            
+            it.extend(df.loc[df.carrier.isin(intensifiable_technologies)].index.tolist())
+            
+
+        spores_config["config"]["intensifiable_technologies"] = it
+                    
+        logger.info(snakemake.params.solving["options"])
+        spore_networks, weights, spore_models, deploy_his = run_spores(
+            least_cost_network=n,
+            spores_config=spores_run,
+            solver_options=snakemake.params.solving,
+            weighting_method='relative_deployment'
+        )
+        
+        
+        # Save each spore network as a .nc file
+        pp = snakemake.output.network.replace(".nc","__spore_{i}.nc")
+        
+        for i, (spore_name, net) in enumerate(spore_networks.items(), start=1):
+            net.export_to_netcdf(pp.format(i=i))
+            print(net.links)
+
+        # # Optionally save weights and history as YAML or pickle
+        # with open(f"{output_dir}/weights.yaml", "w") as f:
+        #     yaml.dump(weights, f)
+    
+    

@@ -1,0 +1,14 @@
+SPORES:
+  config_name: "maximize_H2_CCGT"
+  objective_sense: min
+  spores_slack: 0.1
+  num_spores: 1
+  weighting_method: "relative_deployment"
+  spores_mode: "intensify and diversify"  # Should be either "diversify" or "intensify and diversify"
+  diversification_coefficient: 0.00001 # Must be a positive number.
+  intensification_coefficient: -1  # Can be any number with positive for minimization and negative for maximization.
+  spore_technologies: # Target technologies when running SPORES.
+    - Link:
+        attribute: p_nom
+        index:
+  intensifiable_technologies:  # Subset of spore_technologies to intensify (push to max or min deployment within slack).
