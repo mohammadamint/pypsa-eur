@@ -43,7 +43,7 @@ lines:
   max_extension: 15000 #MW
   
 links:
-  max_extension: 15000 #MW
+  max_extension: 25000 #MW
 
 industry:
     heat_via_biomass: false
@@ -195,6 +195,7 @@ solving:
       BarConvTol: 1.e-5
       BarHomogeneous: 1
 
+
       
   options:
     curtailment_mode: false
@@ -268,7 +269,7 @@ solving:
         sense: ">="
         carriers: 
             NH3:  "data/additional_data/h2_import_constraint.csv" # 612 TWh * 1.46 (efficiency of ammonia cracker)
-            oil: 152000000
+            # oil: 152000000
             H2: "data/additional_data/h2_import_constraint.csv"
 clustering:
   temporal:

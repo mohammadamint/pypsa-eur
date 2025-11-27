@@ -477,10 +477,10 @@ def add_liquid_supply_constraint(n,supply_data_path,):
 
     timesteps = n.snapshot_weightings.iloc[0,0]
     logger.info(f"adding liquid supply global constraint from file: {supply_data_path}.")
-    supply_data = pd.read_csv(supply_data_path,index_col=1) #TWh to MWh and splited over timesteps
+    supply_data = pd.read_csv(supply_data_path,index_col=1)*1000000/8760 #TWh to MWh and splited over timesteps
 
     e_fuel = (["Fischer-Tropsch"],["e_diesel","e_kerosene"])
-    biofuel = (["biomass to liquid","electrobiofuels","biomass to liquid CC"],["biofuel"])
+    biofuel = (["biomass to liquid","electrobiofuels","biomass to liquid CC"],[])#["biofuel"])
     fossil = (["oil refining"],[])
 
     efficiency = {
@@ -497,25 +497,25 @@ def add_liquid_supply_constraint(n,supply_data_path,):
             
             links = n.links.loc[n.links.carrier.isin(category)].index
 
-            prod = n.model["Link-p"].sel({"Link":links}).sum()
+            prod = n.model["Link-p"].sel({"Link":links})
 
             n.model.add_constraints(
-                prod*timesteps >= supply_data[constraint].sum().sum()*1000000/efficiency[name]*0.9,
+                timesteps >= supply_data[constraint].sum().sum()/efficiency[name]*0.95,
                 name = "min_prod_{}".format(name)
             )
             n.model.add_constraints(
-                prod*timesteps <= supply_data[constraint].sum().sum()*1000000/efficiency[name]*1.1,
+                prod*timesteps <= supply_data[constraint].sum().sum()/efficiency[name]*1.05,
                 name = "xmin_prod_{}".format(name)
             )
     
-    # # oil refining
-    # idx = n.links.loc[n.links.carrier.isin(["oil refining"])].index
-    # prod = n.model["Link-p"].sel({"Link":idx})
-    # logger.info(f"--> oil refining: {371*1000000}.")
-    # n.model.add_constraints(
-    #     prod == 371*1000000/8760,
-    #     name = "equal_prod_fossil_oil"
-    # )
+    # oil refining
+    idx = n.links.loc[n.links.carrier.isin(["oil refining"])].index
+    prod = n.model["Link-p"].sel({"Link":idx})
+    logger.info(f"--> oil refining: {371*1000000}.")
+    n.model.add_constraints(
+        prod == 371*1000000/8760,
+        name = "equal_prod_fossil_oil"
+    )
             
 def min_capacity_constraint_by_tyndp(n,ratio,tyndp_path,countries,nuclear):
     
