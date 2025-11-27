@@ -50,7 +50,17 @@ countries:
     - NL
     - DE
 
+sector:
+  imports:
+    enable: true
+    # limit: 10000000000
 
+    limit_sense: <=
+    price:
+      NH3: 97
+      # methanol: 121
+      oil: 125
+      H2: 74
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#snapshots
 snapshots:
   start: "2013-01-01"

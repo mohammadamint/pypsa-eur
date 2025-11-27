@@ -534,6 +534,7 @@ def optimize_model_and_assign_solution_to_network(
     kwargs = get_solver_right(solver_options)
     logger.info(kwargs)
     n.optimize.solve_model(**kwargs)
+    print(n.model.constraints)
     # m.solve(solver_name=solver_name, **kwargs)
 
     # n.optimize.assign_solution()
@@ -545,7 +546,7 @@ def optimize_model_and_assign_solution_to_network(
 def create_modified_model(n: pypsa.Network, configuration: dict, optimal_cost: float, fixed_cost: float, weights: dict) -> linopy.Model:
     """Create the modified model (with the new objective and budget constraint) from the least-cost network."""
     # 1. Access the underlying linopy model of the least-cost pypsa network
-    m = n.optimize.create_model()
+    m = n.model
     
     # 2. Add the budget constraint to the model
     slack = configuration["spores_slack"]

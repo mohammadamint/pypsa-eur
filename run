@@ -1,0 +1,21 @@
+#!/bin/bash -l
+
+
+#SBATCH --account=vito                      # Name of Account (default is vito)
+#SBATCH --partition=batch                   # Name of Partition (default is batch)
+#SBATCH --job-name=pypsa-concawe                   # Name of job
+#SBATCH --output=stdout                     # Standard output
+#SBATCH --error=stderr                      # Standard error
+#SBATCH --ntasks=1                          # Number of CPU processes
+#SBATCH --cpus-per-task=6                   # Number of CPU threads
+#SBATCH --time=0-24:00:00                   # Wall time (format: d-hh:mm:ss)
+#SBATCH --mem=160gb                         # Amount of memory (units: gb, mg, kb)
+#SBATCH --gpus=0                            # Number of GPU
+#SBATCH --mail-user="mohammadamin.tahavori@vito.be"
+#SBATCH --mail-type=BEGIN,END,FAIL
+
+ 
+source activate pypsa-eur
+snakemake -call purge
+#snakemake -call all --configfile config/bev_2035_50.yaml
+snakemake -call all --configfile config/config.concawe.yaml --rerun-incomplete 

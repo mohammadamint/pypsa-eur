@@ -4961,6 +4961,15 @@ def add_industry(
     )
 
     n.add(
+        "Load",
+        nodes,
+        suffix=" data centers electricity",
+        bus=nodes,
+        carrier="data centers electricity",
+        p_set=industrial_demand.loc[nodes, "data_center_electricity"] / nhours,
+    )
+    
+    n.add(
         "Bus",
         spatial.co2.process_emissions,
         location=spatial.co2.locations,
@@ -6172,16 +6181,16 @@ def add_import_options(
             )
 
     if "H2" in import_options:
-        p_nom = gas_input_nodes["pipeline"].dropna()
-        p_nom.rename(lambda x: x + " H2", inplace=True)
+        
+        nodes = pop_layout.index
 
         n.add(
             "Generator",
-            p_nom.index,
+            nodes + " H2",
             suffix=" import",
-            bus=p_nom.index,
+            bus=nodes + " H2",
             carrier="import H2",
-            p_nom=p_nom,
+            p_nom_extendable=True,
             marginal_cost=import_options["H2"],
         )
 

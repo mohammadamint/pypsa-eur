@@ -32,16 +32,14 @@ from scripts._helpers import configure_logging, set_scenario_config
 logger = logging.getLogger(__name__)
 
 def apply_overrides(industry_demand: pd.DataFrame, industry_demand_: str):
-    ALL_COLS = ['low-temperature heat', 'methanol', 'hydrogen', 'naphtha', 'solid biomass', 'electricity', 'methane', 'ammonia', 'coal', 'coke']
+    ALL_COLS = ['low-temperature heat', 'methanol', 'hydrogen', "solid biomass",'naphtha','electricity', 'methane', 'ammonia', 'coal', 'coke',"data_center_electricity"]
 
     industry_demand_overwrite = pd.read_csv(industry_demand_, index_col = 0)
-    print(industry_demand_overwrite)
-    print(industry_demand)
     
+    industry_demand["data_center_electricity"] = 0
     industry_demand.update(industry_demand_overwrite[ALL_COLS])
     industry_demand = industry_demand.round(2)
-    
-    print(industry_demand)
+
 
     return industry_demand
 
@@ -76,6 +74,8 @@ if __name__ == "__main__":
     nodal_production_stacked = nodal_production.stack()
     nodal_production_stacked.index.names = [None, None]
 
+    
+
     # final energy consumption per node and industry (TWh/a)
     nodal_df = (
         (nodal_sector_ratios.multiply(nodal_production_stacked))
@@ -97,5 +97,21 @@ if __name__ == "__main__":
     fn = snakemake.output.industrial_energy_demand_per_node
 
     nodal_df = apply_overrides(nodal_df, snakemake.input.industry_demand_overwrite)
-
+    
+    # add the other electricity demand
+    sectors = [
+        "Other industrial sectors",
+        "Machinery equipment",
+        "Transport equipment",
+        "Wood and wood products",
+        "Textiles and leather",
+        "Other industrial sectors"
+    ]
+    
+    df = nodal_sector_ratios.multiply(nodal_production_stacked).T.loc[(slice(None),sectors),:].groupby(level=0).sum().elec
+    ratio = df/df.sum()*560.1
+    ratio.to_csv("to_add.csv")
+    nodal_df.to_csv("origianl.csv")
+    nodal_df["electricity"] += ratio.values
+    nodal_df.to_csv("new.csv")
     nodal_df.to_csv(fn, float_format="%.2f")

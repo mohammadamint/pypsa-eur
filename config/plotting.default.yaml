@@ -387,6 +387,7 @@ plotting:
     industry electricity: '#2d2a66'
     industry new electricity: '#2d2a66'
     agriculture electricity: '#494778'
+    'data centers electricity': "#F54927"
     # battery + EVs
     battery: '#ace37f'
     battery storage: '#ace37f'

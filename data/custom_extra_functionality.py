@@ -12,72 +12,72 @@ logger = logging.getLogger(__name__)
 def custom_extra_functionality(n, snapshots, snakemake):
     config = snakemake.config
     
-#     if config.get("solving", {}).get("constraints",{}
-#     ).get(
-#         "firm_capacity", {}
-#     ).get("enable",False):
-#         add_Firm_Capacity_Constraint(
-#             n = n,
-#             capacity_shares = config["solving"]["constraints"]["firm_capacity"]["capacity_shares"],
-#             firm_share = config["solving"]["constraints"]["firm_capacity"]["max_demand_hour_share"],
-#         )
+    if config.get("solving", {}).get("constraints",{}
+    ).get(
+        "firm_capacity", {}
+    ).get("enable",False):
+        add_Firm_Capacity_Constraint(
+            n = n,
+            capacity_shares = config["solving"]["constraints"]["firm_capacity"]["capacity_shares"],
+            firm_share = config["solving"]["constraints"]["firm_capacity"]["max_demand_hour_share"],
+        )
         
         
-#     if config.get("solving", {}).get("constraints",{}
-#     ).get(
-#         "import_tax", {}
-#     ).get("enable", False):
-#         add_electricity_trade_tax(
-#             n = n,
-#             tax_value = config["solving"]["constraints"]["import_tax"]["electricity"]["tax_value"],
-#             max_import_share = config["solving"]["constraints"]["import_tax"]["electricity"]["max_import_share"],
+    if config.get("solving", {}).get("constraints",{}
+    ).get(
+        "import_tax", {}
+    ).get("enable", False):
+        add_electricity_trade_tax(
+            n = n,
+            tax_value = config["solving"]["constraints"]["import_tax"]["electricity"]["tax_value"],
+            max_import_share = config["solving"]["constraints"]["import_tax"]["electricity"]["max_import_share"],
             
-#         )
+        )
 
-#         add_hydrogen_import_tax(
-#             n = n,
-#             max_import_share = config["solving"]["constraints"]["import_tax"]["hydrogen"]["max_import_share"],
-#             tax_value = config["solving"]["constraints"]["import_tax"]["hydrogen"]["tax_value"]
-#         )
+        add_hydrogen_import_tax(
+            n = n,
+            max_import_share = config["solving"]["constraints"]["import_tax"]["hydrogen"]["max_import_share"],
+            tax_value = config["solving"]["constraints"]["import_tax"]["hydrogen"]["tax_value"]
+        )
 
-#     if config.get("solving", {}).get("constraints",{}
-#     ).get(
-#         "overwrite_technical_potentials", False
-#     ):
-#         renewable_technical_social_potential(
-#             n,        
-#             tyndp_path=config["solving"]["constraints"]["min_cap_constraint"]["path"],
-#             ratio = config["solving"]["constraints"]["min_cap_constraint"]["ratio"], 
-#         )
+    if config.get("solving", {}).get("constraints",{}
+    ).get(
+        "overwrite_technical_potentials", False
+    ):
+        renewable_technical_social_potential(
+            n,        
+            tyndp_path=config["solving"]["constraints"]["min_cap_constraint"]["path"],
+            ratio = config["solving"]["constraints"]["min_cap_constraint"]["ratio"], 
+        )
      
-#     if config.get("solving", {}).get("constraints",{}
-#     ).get(
-#         "oil_supply_constraint", {}
-#     ).get("enable", False):
-#         add_liquid_supply_constraint(
-#             n=n,
-#             supply_data_path=config["solving"]["constraints"]["oil_supply_constraint"]["path"],
-#         )
+    if config.get("solving", {}).get("constraints",{}
+    ).get(
+        "oil_supply_constraint", {}
+    ).get("enable", False):
+        add_liquid_supply_constraint(
+            n=n,
+            supply_data_path=config["solving"]["constraints"]["oil_supply_constraint"]["path"],
+        )
         
-#         # max_electrolyzer(n)
+        # max_electrolyzer(n)
         
-#     # if config.get("solving", {}).get("constraints",{}
-#     # ).get(
-#     #     "min_cap_constraint", {}
-#     # ).get("enable", False):
-#     min_capacity_constraint_by_tyndp(
-#         n=n,
-#         tyndp_path=config["solving"]["constraints"]["min_cap_constraint"]["path"],
-#         ratio = config["solving"]["constraints"]["min_cap_constraint"]["ratio"],
-#         countries = config["solving"]["constraints"]["min_cap_constraint"]["countries"],
-#         nuclear = config["solving"]["constraints"]["min_cap_constraint"]["nuclear"],
-#     )    
+    # if config.get("solving", {}).get("constraints",{}
+    # ).get(
+    #     "min_cap_constraint", {}
+    # ).get("enable", False):
+    min_capacity_constraint_by_tyndp(
+        n=n,
+        tyndp_path=config["solving"]["constraints"]["min_cap_constraint"]["path"],
+        ratio = config["solving"]["constraints"]["min_cap_constraint"]["ratio"],
+        countries = config["solving"]["constraints"]["min_cap_constraint"]["countries"],
+        nuclear = config["solving"]["constraints"]["min_cap_constraint"]["nuclear"],
+    )    
     
     
-#     min_import_level(
-#         n = n,
-#         import_constraints=config["solving"]["constraints"]["import_constraints"]
-#     )
+    min_import_level(
+        n = n,
+        import_constraints=config["solving"]["constraints"]["import_constraints"]
+    )
 
 def get_tyndp_caps(tyndp_caps,ratio,tech_category_tyndp,country):
 
@@ -443,8 +443,9 @@ def renewable_technical_social_potential(n,tyndp_path,ratio):
                 p_nom_max_calliope = calliope_potentials.loc[country,"onshore_wind_mw"]
                 p_nom_max = get_adjusted_potential(p_nom_max_jrc,p_nom_max_calliope,p_nom_min)
                 tyndp = get_tyndp_caps(tyndp_caps,ratio,["dres_wind_onshore","wind_onshore"],country)
+                tyndp_max = get_tyndp_caps(tyndp_caps,2.5,["dres_wind_onshore","wind_onshore"],country) 
                 n.model.add_constraints( 
-                    n.model["Generator-p_nom"].sel({"Generator-ext":idx}).sum() <= max(p_nom_max,tyndp),
+                    n.model["Generator-p_nom"].sel({"Generator-ext":idx}).sum() <= min(max(p_nom_max,tyndp),tyndp_max),
                     name=f"realistic_onwind_capacity_{country}"
                 )
             except KeyError:
@@ -462,7 +463,7 @@ def renewable_technical_social_potential(n,tyndp_path,ratio):
                 p_nom_max_calliope = calliope_potentials.loc[country,"offshore_wind_mw"]
                 p_nom_max = get_adjusted_potential(0,p_nom_max_calliope,p_nom_min)
                 tyndp = get_tyndp_caps(tyndp_caps,ratio,["ac_fix_based_offshore_radial","ac_floating_offshore_radial","dc_fix_based_offshore_hub","dc_fix_based_offshore_radial","dc_floating_offshore_hub","dc_floating_offshore_radial"],country)
-
+                             
                 n.model.add_constraints( 
                     n.model["Generator-p_nom"].sel({"Generator-ext":idx}).sum() <= max(p_nom_max,tyndp),
                     name=f"realistic_offwind_capacity_{country}"
@@ -482,24 +483,39 @@ def add_liquid_supply_constraint(n,supply_data_path,):
     biofuel = (["biomass to liquid","electrobiofuels","biomass to liquid CC"],["biofuel"])
     fossil = (["oil refining"],[])
 
-
-    for name,info in dict(e_fuel=e_fuel,biofuel=biofuel,fossil=fossil).items():
+    efficiency = {
+        "biofuel": 0.45,
+        "e_fuel": 0.799,
+    }
+    for name,info in dict(e_fuel=e_fuel,biofuel=biofuel).items():
 
         category,constraint = info
 
         if constraint:
             
-            logger.info(f"--> {category}: {supply_data[constraint].sum().sum()*1000000}.")
+            logger.info(f"--> {category}: {supply_data[constraint].sum().sum()*1000000}. --> {timesteps}")
             
             links = n.links.loc[n.links.carrier.isin(category)].index
 
             prod = n.model["Link-p"].sel({"Link":links}).sum()
 
             n.model.add_constraints(
-                prod*timesteps >= supply_data[constraint].sum().sum()*1000000,
+                prod*timesteps >= supply_data[constraint].sum().sum()*1000000/efficiency[name]*0.9,
                 name = "min_prod_{}".format(name)
             )
-            
+            n.model.add_constraints(
+                prod*timesteps <= supply_data[constraint].sum().sum()*1000000/efficiency[name]*1.1,
+                name = "xmin_prod_{}".format(name)
+            )
+    
+    # # oil refining
+    # idx = n.links.loc[n.links.carrier.isin(["oil refining"])].index
+    # prod = n.model["Link-p"].sel({"Link":idx})
+    # logger.info(f"--> oil refining: {371*1000000}.")
+    # n.model.add_constraints(
+    #     prod == 371*1000000/8760,
+    #     name = "equal_prod_fossil_oil"
+    # )
             
 def min_capacity_constraint_by_tyndp(n,ratio,tyndp_path,countries,nuclear):
     
@@ -556,6 +572,12 @@ def min_capacity_constraint_by_tyndp(n,ratio,tyndp_path,countries,nuclear):
                     name = "tyndp_min_"+",".join(tech_category_pypsa) + "_" + country
                 )
                 
+                if country == "NO" and tech_category_pypsa[0].startswith("off"):
+                    n.model.add_constraints(
+                        var >= 30000,
+                        name = "min offshorewind - Norway"
+                    )
+                
         if nuclear:
             
             tyndp_cap = tyndp_caps.loc[
@@ -577,6 +599,8 @@ def min_capacity_constraint_by_tyndp(n,ratio,tyndp_path,countries,nuclear):
                 n.model["Generator-p_nom"].sel({"Generator-ext":idx}).sum() == constraint,
                 name = "nuclear constraint in {}".format(country)
             )
+            
+    
 
             
             
@@ -584,8 +608,10 @@ def min_import_level(n,import_constraints):
     carriers = import_constraints["carriers"]
     sense = import_constraints["sense"]
     
-    print(n.model.constraints)
+    
+    
     for carrier,val in carriers.items():
+        if carrier in ["NH3","H2"]: continue
         constraint = val/8760
         carrier_map = f"import {carrier}"
         if carrier_map in n.generators.carrier.unique():
@@ -618,3 +644,65 @@ def min_import_level(n,import_constraints):
 
         else:
             continue
+    
+    constraint = pd.read_csv(carriers["NH3"])
+    NH3 = constraint.loc[constraint.carrier == "NH3"]
+
+    for node,carrier,value in NH3.itertuples(index=False):
+        logger.info(f"adding constraint on import of {carrier}-{node} {value}")
+        idx = n.links.loc[
+            (n.links.carrier == "ammonia cracker") &
+            (n.links.index.str.startswith(node))
+        ]
+
+        if idx.empty:
+            print(f"{node} {carrier} does not exist")
+
+        else:
+            var = n.model["Link-p"].sel({"Link":idx.index})
+            n.model.add_constraints(
+                var >= value/8760*1.46*0.9,name=f"NH3 import in {node}" #FIXME Avoid hardcoding eff number
+                )
+            var = n.model["Link-p"].sel({"Link":idx.index})
+            n.model.add_constraints(
+                var <= value/8760*1.46*1.1,name=f"xNH3 import in {node}" #FIXME Avoid hardcoding eff number
+                )
+    #%%
+    H2 = constraint.loc[constraint.carrier == "H2"]
+    
+    all_nodes = tuple(H2.node.tolist())
+
+    idx = n.generators.loc[
+        (n.generators.carrier == "import H2") &
+        (~n.generators.index.str.startswith(all_nodes))
+    ].index
+
+    var = n.model["Generator-p_nom"].sel({"Generator-ext":idx})
+    n.model.add_constraints(
+        var == 0
+    )
+    
+
+    for node,carrier,value in H2.itertuples(index=False):
+        
+        logger.info(f"adding constraint on import of {carrier}-{node} {value}")
+
+        idx = n.generators.loc[
+            (n.generators.carrier == "import H2") &
+            (n.generators.index.str.startswith(node))
+        ]
+
+        if idx.empty:
+            print(f"{node} {carrier} does not exist")
+
+        else:
+            var = n.model["Generator-p"].sel({"Generator":idx.index})
+            n.model.add_constraints(
+                var <= value/8760*1.1,name=f"H2 import in {node}y"
+                )
+            
+            var = n.model["Generator-p"].sel({"Generator":idx.index})
+            n.model.add_constraints(
+                var >= value/8760*0.9,name=f"xH2 import in {node}y"
+                )
+            
