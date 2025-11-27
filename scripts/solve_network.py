@@ -467,7 +467,7 @@ def prepare_network(
         buses_i = n.buses.index
         if not np.isscalar(load_shedding):
             # TODO: do not scale via sign attribute (use Eur/MWh instead of Eur/kWh)
-            load_shedding = 1e2  # Eur/kWh
+            load_shedding = 3000  # Eur/MWh
 
         n.add(
             "Generator",
@@ -475,9 +475,9 @@ def prepare_network(
             " load",
             bus=buses_i,
             carrier="load",
-            sign=1e-3,  # Adjust sign to measure p and p_nom in kW instead of MW
+            # sign=1e-3,  # Adjust sign to measure p and p_nom in kW instead of MW
             marginal_cost=load_shedding,  # Eur/kWh
-            p_nom=1e9,  # kW
+            p_nom=1e5,  # MW
         )
 
     if solve_opts.get("curtailment_mode"):
@@ -1411,6 +1411,17 @@ if __name__ == "__main__":
     np.random.seed(solve_opts.get("seed", 123))
 
     n = pypsa.Network(snakemake.input.network)
+    
+    # FIXME
+    # overwrite the shitty caps_max for BE
+    idx = n.generators[
+        n.generators.index.str.startswith("BE0 0 0 off")
+    ].index
+
+    n.generators.loc[idx,"p_nom_max"] = 8000/3
+    
+    logger.info(f"update stupid values for Belgium to {n.generators.loc[idx,'p_nom_max']}")
+    
     planning_horizons = snakemake.wildcards.get("planning_horizons", None)
 
     prepare_network(

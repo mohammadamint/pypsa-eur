@@ -477,7 +477,7 @@ def add_liquid_supply_constraint(n,supply_data_path,):
 
     timesteps = n.snapshot_weightings.iloc[0,0]
     logger.info(f"adding liquid supply global constraint from file: {supply_data_path}.")
-    supply_data = pd.read_csv(supply_data_path,index_col=1)*1000000/8760 #TWh to MWh and splited over timesteps
+    supply_data = pd.read_csv(supply_data_path,index_col=1) #TWh to MWh and splited over timesteps
 
     e_fuel = (["Fischer-Tropsch"],["e_diesel","e_kerosene"])
     biofuel = (["biomass to liquid","electrobiofuels","biomass to liquid CC"],[])#["biofuel"])
@@ -500,11 +500,11 @@ def add_liquid_supply_constraint(n,supply_data_path,):
             prod = n.model["Link-p"].sel({"Link":links})
 
             n.model.add_constraints(
-                timesteps >= supply_data[constraint].sum().sum()/efficiency[name]*0.95,
+                prod >= supply_data[constraint].sum().sum()/efficiency[name]*0.95*1000000/8760,
                 name = "min_prod_{}".format(name)
             )
             n.model.add_constraints(
-                prod*timesteps <= supply_data[constraint].sum().sum()/efficiency[name]*1.05,
+                prod <= supply_data[constraint].sum().sum()/efficiency[name]*1.05*1000000/8760,
                 name = "xmin_prod_{}".format(name)
             )
     
