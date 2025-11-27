@@ -88,10 +88,10 @@ sector:
     2050: 0.1874
     
   land_transport_electric_share:
-    2050: 0.7898
+    2050: 0.6583
     
   land_transport_ice_share:
-    2050: 0.0228
+    2050: 0.1543
     
   shipping_methanol_share:
     2050: 0
